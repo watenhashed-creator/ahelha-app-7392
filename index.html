@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#6d5ce7">
+<title>سهّلها مصروفاتي</title>
+<style>
+:root{--purple:#6d5ce7;--bg:#f5f4ff;--ink:#24223a;--muted:#77748c;--white:#fff;--green:#17865d;--red:#c74444}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Tahoma,sans-serif;color:var(--ink)}
+header{background:linear-gradient(135deg,#7668ef,#5144c6);color:#fff;padding:26px 18px 34px;border-radius:0 0 26px 26px}
+header h1{margin:0 0 8px;font-size:25px}header p{margin:0;opacity:.9;font-size:14px}
+main{max-width:600px;margin:-18px auto 30px;padding:0 14px}
+.card{background:var(--white);border-radius:18px;padding:17px;margin-bottom:14px;box-shadow:0 5px 18px #2e24600d}
+.label{font-size:13px;color:var(--muted);display:block;margin-bottom:7px}
+.balance{font-size:30px;font-weight:800;margin-top:5px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stat{background:#fff;border-radius:16px;padding:15px}.stat strong{display:block;font-size:20px;margin-top:8px}.income{color:var(--green)}.expense{color:var(--red)}
+h2{font-size:17px;margin:0 0 14px}
+form{display:grid;gap:11px}input,select,button{font:inherit;border-radius:12px;padding:13px;border:1px solid #e5e2f2;width:100%}input,select{background:#fff;color:var(--ink)}button{background:var(--purple);color:#fff;border:0;font-weight:700;cursor:pointer}button.secondary{background:#eeeaff;color:#5144c6}button.delete{width:auto;background:#fff0f0;color:var(--red);padding:8px 10px}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #f0eef8;padding:13px 0}.item:first-child{border-top:0}.item small{display:block;color:var(--muted);margin-top:5px}.amount{font-weight:800;white-space:nowrap}.empty{text-align:center;color:var(--muted);padding:15px 0;font-size:14px}.foot{text-align:center;color:var(--muted);font-size:12px;padding:8px}
+</style>
+</head>
+<body>
+<header><h1>سهّلها مصروفاتي 💜</h1><p>رتّبي مصروفك واعرفي كم بقي معك</p></header>
+<main>
+<section class="card"><span class="label">ميزانيتك الحالية</span><div class="row"><input id="budget" type="number" min="0" step="any" placeholder="اكتبي ميزانيتك (مثلاً 150)"><button id="saveBudget" style="max-width:110px">حفظ</button></div><div class="balance" id="remaining">0</div><span class="label">المبلغ المتبقي</span></section>
+<section class="stats"><div class="stat"><span class="label">إجمالي المصروفات</span><strong class="expense" id="totalExpense">0</strong></div><div class="stat"><span class="label">عدد المصروفات</span><strong id="count">0</strong></div></section>
+<section class="card"><h2>أضيفي مصروفًا جديدًا</h2><form id="expenseForm"><input id="title" required maxlength="60" placeholder="على إيش صرفتِ؟ مثال: أكل"><div class="row"><input id="amount" required type="number" min="0.01" step="any" placeholder="المبلغ"><select id="category"><option>أكل وشرب</option><option>مواصلات</option><option>البيت</option><option>مدرسة</option><option>تسوق</option><option>أخرى</option></select></div><input id="date" type="date" required><button type="submit">إضافة المصروف</button></form></section>
+<section class="card"><h2>مصروفاتي</h2><div id="list" class="empty">ما أضفتِ أي مصروف بعد</div><button id="clear" class="secondary" type="button">حذف كل المصروفات</button></section>
+<div class="foot">بياناتك محفوظة على هذا الجهاز في المتصفح.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let budget=Number(localStorage.getItem('sh_budget')||0), items=[];
+try{items=JSON.parse(localStorage.getItem('sh_items')||'[]')}catch(e){items=[]}
+$('budget').value=budget||'';
+$('date').value=new Date().toISOString().slice(0,10);
+function save(){localStorage.setItem('sh_budget',String(budget));localStorage.setItem('sh_items',JSON.stringify(items))}
+function fmt(n){return Number(n).toLocaleString('ar-YE',{maximumFractionDigits:2})}
+function render(){
+ const total=items.reduce((s,x)=>s+Number(x.amount),0);
+ $('remaining').textContent=fmt(budget-total);
+ $('totalExpense').textContent=fmt(total);$('count').textContent=items.length;
+ if(!items.length){$('list').className='empty';$('list').textContent='ما أضفتِ أي مصروف بعد';return}
+ $('list').className='';
+ $('list').innerHTML=items.slice().reverse().map(x=>`<div class="item"><div><strong>${escapeHtml(x.title)}</strong><small>${escapeHtml(x.category)} • ${escapeHtml(x.date)}</small></div><div style="display:flex;align-items:center;gap:8px"><span class="amount expense">-${fmt(x.amount)}</span><button class="delete" data-id="${x.id}" aria-label="حذف">حذف</button></div></div>`).join('');
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('saveBudget').onclick=()=>{budget=Math.max(0,Number($('budget').value)||0);save();render()};
+$('expenseForm').onsubmit=e=>{e.preventDefault();items.push({id:Date.now(),title:$('title').value.trim(),amount:Number($('amount').value),category:$('category').value,date:$('date').value});save();render();$('title').value='';$('amount').value='';};
+$('list').onclick=e=>{const b=e.target.closest('button[data-id]');if(b){items=items.filter(x=>String(x.id)!==b.dataset.id);save();render()}};
+$('clear').onclick=()=>{if(confirm('متأكدة أنك تريدين حذف كل المصروفات؟')){items=[];save();render()}};
+render();
+</script>
+</body></html>
