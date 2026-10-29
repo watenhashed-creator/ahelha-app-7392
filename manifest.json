@@ -1,0 +1,6 @@
+{
+"name":"سهّلها مصروفاتي","short_name":"مصروفاتي","lang":"ar","dir":"rtl",
+"start_url":"./index.html","scope":"./","display":"standalone",
+"background_color":"#f5f4ff","theme_color":"#6d5ce7",
+"icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
